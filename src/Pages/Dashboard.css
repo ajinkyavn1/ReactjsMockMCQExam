@@ -1,0 +1,62 @@
+.card {
+    transition: background-color 0.3s ease;
+}
+
+.card.bg-primary {
+    background-color: #007bff !important; /* Bootstrap primary color */
+    color: white;
+}
+.btn {
+    padding: 10px 20px;
+    font-size: 1.25rem;
+}
+body {
+    height: 100vh;
+    margin: 0;
+    position: relative;
+    overflow: auto; /* Hide overflow from shapes */
+}
+body::before,
+body::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1; /* Send shapes behind content */
+}
+
+body::before {
+    background: linear-gradient(to right, #7c95d8, #d11424);
+    clip-path: ellipse(90% 80% at 20% 50%); /* Adjust shape and position */
+}
+
+body::after {
+    background: linear-gradient(to right, #0dd3f7, #d415cb);
+    clip-path: ellipse(50% 70% at 80% 50%); /* Adjust shape and position */
+}
+
+.card {
+    border-radius: 8px; /* Slightly rounded corners for cards */
+}
+
+.card.bg-primary {
+    background-color: #007bff !important; /* Highlight color for selected option */
+    color: white; /* Change text color for selected card */
+}
+.container {
+    max-height: 100%; /* Keep a max height for scrolling */
+    overflow-y: auto; /* Allow scrolling */
+  }
+  
+  .btn {
+    
+    margin: 10px 0; /* Add margin for spacing */
+  }
+  
+  @media (max-width: 576px) {
+    .d-flex {
+      flex-direction: column; /* Stack buttons on small screens */
+    }
+  }
