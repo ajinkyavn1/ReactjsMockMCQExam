@@ -5,7 +5,7 @@ import { useFirebase } from '../Context/FirebaseContext';
 import { collection, getDocs, writeBatch, addDoc, updateDoc, doc } from 'firebase/firestore';
 import { getDatabase, ref, set } from 'firebase/database';
 import UserTests from './UserTests';
-
+import ProgressBar from 'react-bootstrap/ProgressBar';
 export default function Dashboard(props) {
   const firebase = useFirebase();
   const db = getDatabase(firebase.app);
@@ -21,6 +21,7 @@ export default function Dashboard(props) {
   const [currentRemainingTime, setCurrentRemainingTime] = useState(totalTime);
   const [testInfoRef, setTestInfoRef] = useState(null);
   const [SubmitedAnswers, setSubmittedAnswers] = useState([]);
+  const [TotalQuestionRequired,setTotalQuestionRequired]=useState(5);
   // Timer effect
   const [QuestionList, setQuestionIds] = useState(null);
   useEffect(() => {
@@ -42,7 +43,9 @@ export default function Dashboard(props) {
     }
     return () => clearInterval(timer);
   }, [isTestStarted, currentRemainingTime]);
-
+  const handleRangeQuestion = useCallback((event) => {
+    setTotalQuestionRequired(event.target.value);
+  });
   // Store user's selected option and answer
   const handleOptionChange = async (event) => {
     const selected = event.target.value;
@@ -96,50 +99,18 @@ export default function Dashboard(props) {
     setSelectedOption('');
     setCurrentQuestion((prev) => prev + 1);
   };
-  // const fetchdata = async () => {
-  //   setLoading(true);
-  //   try {
-  //     const querySnapshot = await getDocs(collection(firebase.firestoreDb, 'Questions'));
-  //     const fetchedQuestions = [];
-  //     const questionId = [];
 
-  //     querySnapshot.forEach((doc) => {
-  //       const questionData = {
-  //         QuestionId: doc.id,
-  //         ProblemText: doc.data().ProblemText,
-  //         Options: [
-  //           { id: 'A', label: doc.data().optionA },
-  //           { id: 'B', label: doc.data().optionB },
-  //           { id: 'C', label: doc.data().optionC },
-  //           { id: 'D', label: doc.data().optionD }
-  //         ],
-  //         isImage: doc.data().isImage,
-  //         ImageUrl: doc.data().Imageurl,
-  //         correctAnswer: doc.data().answer,
-  //       };
-  //       fetchedQuestions.push(questionData);
-  //       questionId.push(doc.id); // Add the question ID to the list
-  //     });
-  //     setQuestionIds(questionId)
-  //     setQuestions(fetchedQuestions);
-  //   } catch (error) {
-  //     console.error("Error fetching questions: ", error);
-  //     alert("Failed to load questions. Please try again.");
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
   const IntiateTestData = useCallback(async () => {
     const { questions, questionIds } = await firebase.fetchQuestions();
 
     // Ensure there are enough questions to select from
-    if (questions.length < 10 || questionIds.length < 10) {
+    if (questions.length < TotalQuestionRequired || questionIds.length < TotalQuestionRequired) {
       throw new Error("Not enough questions to select 10.");
     }
 
     // Select 10 random unique indices
     const selectedIndices = [];
-    while (selectedIndices.length < 10) {
+    while (selectedIndices.length < TotalQuestionRequired) {
       const randomIndex = Math.floor(Math.random() * questions.length);
       if (!selectedIndices.includes(randomIndex)) {
         selectedIndices.push(randomIndex);
@@ -183,7 +154,6 @@ export default function Dashboard(props) {
     setTotalMarks(0);
 
   }, [firebase, totalTime]);
-
   // Submit the test
   const confirmSubmitTest = useCallback(async () => {
     setStartTest(false);
@@ -192,6 +162,7 @@ export default function Dashboard(props) {
     setTotalMarks(0);
     setTestInfoRef(null);
     handleNextClick();
+    // setTotalQuestionRequired(5);
     uploadAnswersInBulk(props.User.uid, testInfoRef, SubmitedAnswers);
     alert('Test has been submitted! Your Result being Proceced Soon ');
   }, [testCode, totalMarks, db]);
@@ -204,6 +175,8 @@ export default function Dashboard(props) {
         {IsStartTest ? (
           <div className="mt-4 border-primary">
             {/* Test Questions Section */}
+            <div className='card  rounded-2 m-2 p-2'> Test Progress
+            <ProgressBar now={((currentQuestion+1)/TotalQuestionRequired)*100} variant="success" /></div>
             <div className="card mb-4 shadow rounded-4">
               <div className="card">
                 <h5 className="card-body">
@@ -275,6 +248,19 @@ export default function Dashboard(props) {
           </div>
         ) : (
           <div className="container mt-4">
+            <div className='card'>
+              Total Questions : {TotalQuestionRequired}
+            <input
+        type="range"
+        min={5}
+        max={180}
+        id="questionRange"
+        step={5}
+        className="range"
+        onChange={handleRangeQuestion}
+        value={TotalQuestionRequired}
+      />
+            </div>
             <button className="btn btn-primary" onClick={StartTest}>
               Start Test
             </button>

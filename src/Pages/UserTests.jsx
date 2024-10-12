@@ -144,36 +144,41 @@ const UserTests = ({ user }) => {
     };
 
     return (
-        <div className="user-tests card rounded-5 m-5 p-5 align-content-center shadow">
-            <h3 className='mb-4'>Your Tests</h3>
-            <div className="tests-grid">
-                {currentTests.map(test => (
-                    <div
-                        key={test.id}
-                        className={`test-card ${selectedTest && selectedTest.id === test.id ? 'selected' : ''}`}
-                        onClick={() => handleTestClick(test)}
-                    >
-                        <p><strong>Test ID:</strong> {test.id}</p>
-                        <p><strong>Total Time:</strong> {test.TestConfiguration.TotalTime} seconds</p>
-                        <p><strong>Remaining Time:</strong> {test.TestConfiguration.currentRemainingTime} seconds</p>
-                        <p><strong>Status:</strong> {test.TestConfiguration.isTestEnd ? 'Ended' : 'In Progress'}</p>
-                        <button onClick={() => handleTestClick(test)} className="view-test-data">View Test Data</button>
+        <div>
+            {
+                currentTests.length > 0 ? (<div className='user-tests card rounded-5 m-5 p-5 align-content-center shadow'>
+                      <h3 className='mb-4'>Your Tests</h3>
+                    <div className="tests-grid">
+                        {currentTests.map(test => (
+                            <div
+                                key={test.id}
+                                className={`test-card ${selectedTest && selectedTest.id === test.id ? 'selected' : ''}`}
+                                onClick={() => handleTestClick(test)}
+                            >
+                                <p><strong>Test ID:</strong> {test.id}</p>
+                                <p><strong>Total Time:</strong> {test.TestConfiguration.TotalTime} seconds</p>
+                                <p><strong>Remaining Time:</strong> {test.TestConfiguration.currentRemainingTime} seconds</p>
+                                <p><strong>Status:</strong> {test.TestConfiguration.isTestEnd ? 'Ended' : 'In Progress'}</p>
+                                <button onClick={() => handleTestClick(test)} className="view-test-data">View Test Data</button>
+                            </div>
+                        ))}
                     </div>
-                ))}
-            </div>
 
-            {/* Pagination controls */}
-            <div className="pagination m-5">
-                <button onClick={handlePrevPage} className="view-test-data" disabled={currentPage === 1}>
-                    Previous
-                </button>
-                <span>Page {currentPage} of {totalPages}</span>
-                <button onClick={handleNextPage} className='view-test-data' disabled={currentPage === totalPages}>
-                    Next
-                </button>
-            </div>
+                    {/* Pagination controls */}
+                    <div className="pagination m-5">
+                        <button onClick={handlePrevPage} className="view-test-data" disabled={currentPage === 1}>
+                            Previous
+                        </button>
+                        <span>Page {currentPage} of {totalPages}</span>
+                        <button onClick={handleNextPage} className='view-test-data' disabled={currentPage === totalPages}>
+                            Next
+                        </button>
+                    </div>
 
-            {renderResultsAccordion()}
+                    {renderResultsAccordion()}
+                </div>)
+                    : (null)
+            }
         </div>
     );
 };
