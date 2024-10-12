@@ -79,8 +79,10 @@
 .accordion-card.incorrect {
     border-left: 5px solid red;
 }
+.accordion-card.notAttempted{
+    border-left:5px solid  yellow;
+}
 
-/* Accordion header and content styling */
 .accordion-header {
     display: flex;
     justify-content: space-between;
@@ -115,6 +117,9 @@
 
 .status-indicator.correct {
     background-color: green;
+}
+.status-indicator.notAttempted{
+    background-color: yellow;
 }
 
 .status-indicator.incorrect {

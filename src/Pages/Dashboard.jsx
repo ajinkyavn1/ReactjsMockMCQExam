@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Toolbar from '../Components/Toolbar';
 import '../Pages/Dashboard.css';
 import { useFirebase } from '../Context/FirebaseContext';
-import { collection, getDocs,writeBatch, addDoc, updateDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, writeBatch, addDoc, updateDoc, doc } from 'firebase/firestore';
 import { getDatabase, ref, set } from 'firebase/database';
 import UserTests from './UserTests';
 
@@ -14,7 +14,7 @@ export default function Dashboard(props) {
   const [IsStartTest, setStartTest] = useState(false);
   const [Questions, setQuestions] = useState([]);
   const [isTestStarted, setIsTestStarted] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [testCode, setTestCode] = useState('');
   const [totalMarks, setTotalMarks] = useState(0);
   const [totalTime] = useState(60 * 10); // Total time in seconds (e.g., 10 minutes)
@@ -22,7 +22,7 @@ export default function Dashboard(props) {
   const [testInfoRef, setTestInfoRef] = useState(null);
   const [SubmitedAnswers, setSubmittedAnswers] = useState([]);
   // Timer effect
-  const [QuestionList,setQuestionIds]=useState(null);
+  const [QuestionList, setQuestionIds] = useState(null);
   useEffect(() => {
     let timer;
     if (isTestStarted && currentRemainingTime % 10 === 0) {
@@ -48,37 +48,37 @@ export default function Dashboard(props) {
     const selected = event.target.value;
     setSelectedOption(selected);
   };
- const uploadAnswersInBulk = async (userId, testInfoId, submittedAnswers) => {
-  if (!testInfoId) {
+  const uploadAnswersInBulk = async (userId, testInfoId, submittedAnswers) => {
+    if (!testInfoId) {
       console.error("No test is currently active.");
       return;
-  }
-  if(submittedAnswers.length==0){
-    console.log("No Answers")
-    return
-  }
+    }
+    if (submittedAnswers.length == 0) {
+      console.log("No Answers")
+      return
+    }
 
-  const batch = writeBatch(firebase.firestoreDb); // Create a write batch
-  const testRef = doc(firebase.firestoreDb, `TestData/${userId}/TestInfo/${testInfoId}`); // Reference to the test document
+    const batch = writeBatch(firebase.firestoreDb); // Create a write batch
+    const testRef = doc(firebase.firestoreDb, `TestData/${userId}/TestInfo/${testInfoId}`); // Reference to the test document
 
-  // Prepare updates for the batch
-  submittedAnswers.forEach(answer => {
+    // Prepare updates for the batch
+    submittedAnswers.forEach(answer => {
       const questionResponsePath = `QuestionResponse.${answer.QuestionId}`;
       batch.update(testRef, {
-          [questionResponsePath]: {
-              selectedAnswer: answer.userAnswer,
-              isCorrect: answer.isCorrect,
-          },
+        [questionResponsePath]: {
+          selectedAnswer: answer.userAnswer,
+          isCorrect: answer.isCorrect,
+        },
       });
-  });
-  await setSubmittedAnswers([]);
-  try {
+    });
+    await setSubmittedAnswers([]);
+    try {
       await batch.commit(); // Commit the batch
       console.log("Question responses uploaded successfully!");
-  } catch (error) {
+    } catch (error) {
       console.error("Error uploading question responses: ", error);
-  }
-};
+    }
+  };
   // Move to the next question
   const handleNextClick = () => {
     const currentQuestionData = Questions[currentQuestion];
@@ -92,18 +92,10 @@ export default function Dashboard(props) {
         userAnswer: selectedOption,
         isCorrect: isCorrect,
       }
-    ]); 
+    ]);
     setSelectedOption('');
     setCurrentQuestion((prev) => prev + 1);
   };
-
-const fetchdata = async () => {
-            const { questions, questionIds } = await firebase.fetchQuestions();
-            setQuestionIds(questionIds)
-            setQuestions(questions);
-};
-        
-
   // const fetchdata = async () => {
   //   setLoading(true);
   //   try {
@@ -138,12 +130,34 @@ const fetchdata = async () => {
   //   }
   // };
   const IntiateTestData = useCallback(async () => {
+    const { questions, questionIds } = await firebase.fetchQuestions();
+
+    // Ensure there are enough questions to select from
+    if (questions.length < 10 || questionIds.length < 10) {
+      throw new Error("Not enough questions to select 10.");
+    }
+
+    // Select 10 random unique indices
+    const selectedIndices = [];
+    while (selectedIndices.length < 10) {
+      const randomIndex = Math.floor(Math.random() * questions.length);
+      if (!selectedIndices.includes(randomIndex)) {
+        selectedIndices.push(randomIndex);
+      }
+    }
+
+    // Get the selected questions and corresponding IDs
+    const selectedQuestions = selectedIndices.map(index => questions[index]);
+    const selectedQuestionIds = selectedIndices.map(index => questionIds[index]);
+
+    setQuestionIds(selectedQuestionIds)
+    setQuestions(selectedQuestions);
     const testData = {
       TestConfiguration: {
         TotalTime: totalTime,
         currentRemainingTime: totalTime,
         isTestEnd: false,
-        QuestionsIds:QuestionList
+        QuestionsIds: selectedQuestionIds
       },
       QuestionResponse: {}
     }
@@ -161,7 +175,7 @@ const fetchdata = async () => {
     const uniqueTestCode = Date.now(); // Generate unique test code
     setTestCode(uniqueTestCode);
     setCurrentRemainingTime(totalTime);
-    await fetchdata();
+    // await fetchdata();
     await IntiateTestData();
     setStartTest(true);
     setCurrentQuestion(0);
@@ -177,94 +191,96 @@ const fetchdata = async () => {
     setCurrentQuestion(0);
     setTotalMarks(0);
     setTestInfoRef(null);
+    handleNextClick();
+    uploadAnswersInBulk(props.User.uid, testInfoRef, SubmitedAnswers);
     alert('Test has been submitted! Your Result being Proceced Soon ');
   }, [testCode, totalMarks, db]);
 
   return (
     <>
-    <div className='container'>
-      <Toolbar User={props.User} autoSubmit={confirmSubmitTest} isTestStarted={isTestStarted} />
+      <div className='container'>
+        <Toolbar User={props.User} autoSubmit={confirmSubmitTest} isTestStarted={isTestStarted} />
 
-      {IsStartTest ? (
-        <div className="mt-4 border-primary">
-          {/* Test Questions Section */}
-          <div className="card mb-4 shadow rounded-4">
+        {IsStartTest ? (
+          <div className="mt-4 border-primary">
+            {/* Test Questions Section */}
+            <div className="card mb-4 shadow rounded-4">
+              <div className="card">
+                <h5 className="card-body">
+                  {loading ? (
+                    <p>Loading question...</p>
+                  ) : (
+                    <div dangerouslySetInnerHTML={{ __html: Questions.length > 0 ? Questions[currentQuestion].ProblemText : 'Loading...' }} />
+                  )}
+                  {Questions.length > 0 && Questions[currentQuestion].isImage ? (
+                    <div>
+                      <img src={Questions[currentQuestion].ImageUrl} width="500px" height="500px" alt="Question related visual" />
+                    </div>
+                  ) : null}
+                </h5>
+              </div>
+            </div>
+
+            {/* Options Section */}
             <div className="card">
-              <h5 className="card-body">
-                {loading ? (
-                  <p>Loading question...</p>
-                ) : (
-                  <div dangerouslySetInnerHTML={{ __html: Questions.length > 0 ? Questions[currentQuestion].ProblemText : 'Loading...' }} />
-                )}
-                {Questions.length > 0 && Questions[currentQuestion].isImage ? (
-                  <div>
-                    <img src={Questions[currentQuestion].ImageUrl} width="500px" height="500px" alt="Question related visual" />
+              <div className="row g-5">
+                {Questions.length > 0 ? Questions[currentQuestion].Options.map((option) => (
+                  <div className="col-12 col-md-6" key={option.id}>
+                    <div
+                      className={`card text-center p-4 shadow-sm ${selectedOption === option.label ? 'bg-primary text-white' : ''}`}
+                      onClick={() => setSelectedOption(option.label)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <input
+                        type="radio"
+                        className="form-check-input"
+                        name="Mcqoptions"
+                        id={option.id}
+                        value={option.label}
+                        onChange={handleOptionChange}
+                        checked={selectedOption === option.label}
+                        style={{ transform: 'scale(1.5)' }}
+                      />
+                      <label className="card-body" htmlFor={option.id} style={{ fontSize: '1.25rem' }}>
+                        <div dangerouslySetInnerHTML={{ __html: option.label }} />
+                      </label>
+                    </div>
                   </div>
-                ) : null}
-              </h5>
-            </div>
-          </div>
+                )) : 'Loading...'}
+              </div>
 
-          {/* Options Section */}
-          <div className="card">
-            <div className="row g-5">
-              {Questions.length > 0 ? Questions[currentQuestion].Options.map((option) => (
-                <div className="col-12 col-md-6" key={option.id}>
-                  <div
-                    className={`card text-center p-4 shadow-sm ${selectedOption === option.label ? 'bg-primary text-white' : ''}`}
-                    onClick={() => setSelectedOption(option.label)}
-                    style={{ cursor: 'pointer' }}
+              <div className='card m-4 p-1 shadow rounded-5 justify-content-center'>
+                <div className="d-flex justify-content-between">
+                  <button
+                    className="btn btn-primary mt-4 m-2 p-3"
+                    onClick={handleNextClick}
+                    disabled={currentQuestion === Questions.length - 1}
                   >
-                    <input
-                      type="radio"
-                      className="form-check-input"
-                      name="Mcqoptions"
-                      id={option.id}
-                      value={option.label}
-                      onChange={handleOptionChange}
-                      checked={selectedOption === option.label}
-                      style={{ transform: 'scale(1.5)' }}
-                    />
-                    <label className="card-body" htmlFor={option.id} style={{ fontSize: '1.25rem' }}>
-                      <div dangerouslySetInnerHTML={{ __html: option.label }} />
-                    </label>
-                  </div>
+                    {currentQuestion === Questions.length - 1 ? 'Last Question' : 'Next Question'}
+                  </button>
+                  <button className="btn btn-primary mt-4 m-2 p-3" onClick={confirmSubmitTest}>
+                    Submit Test
+                  </button>
                 </div>
-              )) : 'Loading...'}
+              </div>
             </div>
 
-            <div className='card m-4 p-1 shadow rounded-5 justify-content-center'>
-              <div className="d-flex justify-content-between">
-                <button
-                  className="btn btn-primary mt-4 m-2 p-3"
-                  onClick={handleNextClick}
-                  disabled={currentQuestion === Questions.length - 1}
-                >
-                  {currentQuestion === Questions.length - 1 ? 'Last Question' : 'Next Question'}
-                </button>
-                <button className="btn btn-primary mt-4 m-2 p-3" onClick={confirmSubmitTest}>
-                  Submit Test
-                </button>
+            {/* Display Time Remaining */}
+            <div className="card mt-4">
+              <div className="card-body">
+                <h5>Time Remaining: {Math.floor(currentRemainingTime / 60)}:{(currentRemainingTime % 60).toString().padStart(2, '0')}</h5>
+                <h5>Total Time: {Math.floor(totalTime / 60)}:{(totalTime % 60).toString().padStart(2, '0')}</h5>
               </div>
             </div>
           </div>
-
-          {/* Display Time Remaining */}
-          <div className="card mt-4">
-            <div className="card-body">
-              <h5>Time Remaining: {Math.floor(currentRemainingTime / 60)}:{(currentRemainingTime % 60).toString().padStart(2, '0')}</h5>
-              <h5>Total Time: {Math.floor(totalTime / 60)}:{(totalTime % 60).toString().padStart(2, '0')}</h5>
-            </div>
+        ) : (
+          <div className="container mt-4">
+            <button className="btn btn-primary" onClick={StartTest}>
+              Start Test
+            </button>
+            <UserTests user={props.User} />
           </div>
-        </div>
-      ) : (
-        <div className="container mt-4">
-          <button className="btn btn-primary" onClick={StartTest}>
-            Start Test
-          </button>
-          <UserTests user={props.User} />
-        </div>
-      )}
+        )}
       </div>
     </>
   );

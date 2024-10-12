@@ -45,6 +45,7 @@ const FirebaseProvider=(props)=>{
                     isImage: doc.data().isImage,
                     ImageUrl: doc.data().Imageurl,
                     correctAnswer: doc.data().answer,
+                    SolutionText:doc.data().SolutionText,
                 };
                 fetchedQuestions.push(questionData);
                 fetchedQuestionIds.push(doc.id);

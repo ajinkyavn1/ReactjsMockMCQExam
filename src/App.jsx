@@ -22,6 +22,7 @@ function App() {
   },[])
   return <>
             {!User?<LoginPage/>:<Dashboard User={User}/>}
+            <div className='card rounded-5 p-5 shadow'>Love from &#10084; AJ</div>
     </>
 }
 
