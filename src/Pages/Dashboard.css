@@ -59,3 +59,8 @@ body::after {
       flex-direction: column; /* Stack buttons on small screens */
     }
   }
+  .SubjectUse{
+    display: flex;
+    justify-content: center;
+    margin:  15px;
+  }

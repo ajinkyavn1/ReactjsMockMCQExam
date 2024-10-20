@@ -6,6 +6,7 @@ import { collection, getDocs, writeBatch, addDoc, updateDoc, doc } from 'firebas
 import { getDatabase, ref, set } from 'firebase/database';
 import UserTests from './UserTests';
 import ProgressBar from 'react-bootstrap/ProgressBar';
+import UploadComponent from './UploadData';
 export default function Dashboard(props) {
   const firebase = useFirebase();
   const db = getDatabase(firebase.app);
@@ -17,13 +18,22 @@ export default function Dashboard(props) {
   const [loading, setLoading] = useState(false);
   const [testCode, setTestCode] = useState('');
   const [totalMarks, setTotalMarks] = useState(0);
-  const [totalTime] = useState(60 * 10); // Total time in seconds (e.g., 10 minutes)
+  const [totalTime] = useState(60 * 90); // Total time in seconds (e.g., 10 minutes)
   const [currentRemainingTime, setCurrentRemainingTime] = useState(totalTime);
   const [testInfoRef, setTestInfoRef] = useState(null);
   const [SubmitedAnswers, setSubmittedAnswers] = useState([]);
-  const [TotalQuestionRequired,setTotalQuestionRequired]=useState(5);
-  // Timer effect
+  const [TotalQuestionRequired, setTotalQuestionRequired] = useState(5);
+  const [subjects, setSubjects] = useState(null);
   const [QuestionList, setQuestionIds] = useState(null);
+  const [selectedSubjects, setSelectedSubjects] = useState({});
+
+  const handleCheckboxChange = (subject) => {
+    setSelectedSubjects((prev) => ({
+      ...prev,
+      [subject]: !prev[subject], // Toggle selection
+    }));
+  };
+
   useEffect(() => {
     let timer;
     if (isTestStarted && currentRemainingTime % 10 === 0) {
@@ -166,7 +176,22 @@ export default function Dashboard(props) {
     uploadAnswersInBulk(props.User.uid, testInfoRef, SubmitedAnswers);
     alert('Test has been submitted! Your Result being Proceced Soon ');
   }, [testCode, totalMarks, db]);
+  const InitilizeServerFetchData = useCallback(async () => {
+    try {
+      const subjectsData = await firebase.fetchSubjects();
+      setSubjects(subjectsData);
+    } catch (error) {
+      console.error("Error fetching subjects:", error);
+    }
+  }, []);
 
+  useEffect(() => {
+    InitilizeServerFetchData();
+  }, [InitilizeServerFetchData]);
+
+  useEffect(() => {
+    console.log(subjects);
+  }, [subjects]);
   return (
     <>
       <div className='container'>
@@ -176,7 +201,7 @@ export default function Dashboard(props) {
           <div className="mt-4 border-primary">
             {/* Test Questions Section */}
             <div className='card  rounded-2 m-2 p-2'> Test Progress
-            <ProgressBar now={((currentQuestion+1)/TotalQuestionRequired)*100} variant="success" /></div>
+              <ProgressBar now={((currentQuestion + 1) / TotalQuestionRequired) * 100} variant="success" /></div>
             <div className="card mb-4 shadow rounded-4">
               <div className="card">
                 <h5 className="card-body">
@@ -241,30 +266,48 @@ export default function Dashboard(props) {
             {/* Display Time Remaining */}
             <div className="card mt-4">
               <div className="card-body">
-                <h5>Time Remaining: {Math.floor(currentRemainingTime / 60)}:{(currentRemainingTime % 60).toString().padStart(2, '0')}</h5>
-                <h5>Total Time: {Math.floor(totalTime / 60)}:{(totalTime % 60).toString().padStart(2, '0')}</h5>
+                <h5>Time Remaining: {Math.floor(currentRemainingTime / 60)}:{(currentRemainingTime % 60).toString().padStart(2, '0')} Minutes</h5>
+                <h5>Total Time: {Math.floor(totalTime / 60)}:{(totalTime % 60).toString().padStart(2, '0')} Minutes</h5>
               </div>
             </div>
           </div>
         ) : (
           <div className="container mt-4">
             <div className='card'>
-              Total Questions : {TotalQuestionRequired}
-            <input
-        type="range"
-        min={5}
-        max={180}
-        id="questionRange"
-        step={5}
-        className="range"
-        onChange={handleRangeQuestion}
-        value={TotalQuestionRequired}
-      />
+              <div className='SubjectUse'>
+                <strong>Subject-:  </strong>
+                {subjects ? Object.keys(subjects).map((subject) => (
+                  <div key={subject}>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={!!selectedSubjects[subject]}
+                        onChange={() => handleCheckboxChange(subject)}
+                      />
+                      {subjects[subject]}
+                    </label>
+                  </div>
+                )) : <div>Loading..</div>}
+              </div>
+              <strong>Total Test Questions Required</strong>{TotalQuestionRequired}
+              <input
+                type="range"
+                min={5}
+                max={180}
+                id="questionRange"
+                step={5}
+                className="range"
+                onChange={handleRangeQuestion}
+                value={TotalQuestionRequired}
+              />
             </div>
             <button className="btn btn-primary" onClick={StartTest}>
               Start Test
             </button>
             <UserTests user={props.User} />
+            <div className='card'>
+              {/* <UploadComponent/> */}
+            </div>
           </div>
         )}
       </div>

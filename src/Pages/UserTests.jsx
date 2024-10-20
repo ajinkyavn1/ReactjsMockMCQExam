@@ -8,11 +8,9 @@ const UserTests = ({ user }) => {
     const [tests, setTests] = useState([]);
     const [selectedTest, setSelectedTest] = useState(null);
     const [selectedTestData, setSelectedTestData] = useState(null);
-    // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
-    const [testsPerPage] = useState(3); // Change this value to adjust the number of tests per page
+    const [testsPerPage] = useState(2);
 
-    // Fetch user tests from Firestore
     useEffect(() => {
         const fetchTests = async () => {
             const testsCollection = collection(firebase.firestoreDb, `TestData/${user.uid}/TestInfo`);
@@ -36,39 +34,30 @@ const UserTests = ({ user }) => {
             questionIds.includes(question.QuestionId)
         );
 
-        const mergedData = filteredQuestions.map(question => {
-            const response = TestDataObject.QuestionResponse[question.QuestionId]; // Get response if exists
+        return filteredQuestions.map(question => {
+            const response = TestDataObject.QuestionResponse[question.QuestionId];
             return {
-                questionText: question.ProblemText, // The question text
-                correctAnswer: question.correctAnswer, // The correct answer from QuestionDataArray
+                questionText: question.ProblemText,
+                correctAnswer: question.correctAnswer,
                 SolutionText: question.SolutionText,
-                selectedAnswer: response ? response.selectedAnswer : null, // User's selected answer, or null if not answered
-                isCorrect: response ? response.isCorrect : null // Whether the answer is correct, or null if not answered
+                selectedAnswer: response ? response.selectedAnswer : null,
+                isCorrect: response ? response.isCorrect : null
             };
         });
-
-        const unansweredQuestions = questionIds
-            .filter(id => !QuestionDataArray.some(question => question.QuestionId === id))
-            .map(id => ({
-                questionText: "Question not available", // Placeholder text for unavailable questions
-                correctAnswer: null,
-                selectedAnswer: null, // No answer available
-                isCorrect: null // No correctness information available
-            }));
-
-        return [...mergedData, ...unansweredQuestions];
     };
 
     const handleTestClick = async (test) => {
+        if(selectedTest==test){
+            alert("Already Selected Test")
+            return ;
+        }
         const { questions } = await firebase.fetchQuestions();
         const mergedData = await filterQuestionsWithResponses(test, questions);
         setSelectedTest(test);
-        setSelectedTestData(mergedData); // Store the merged data for rendering
+        setSelectedTestData(mergedData);
     };
 
-    // Toggle accordion for each question
     const [expandedQuestions, setExpandedQuestions] = useState({});
-
     const toggleQuestionExpand = (questionText) => {
         setExpandedQuestions((prev) => ({
             ...prev,
@@ -76,13 +65,15 @@ const UserTests = ({ user }) => {
         }));
     };
 
-    // Render the results accordion for the selected test
     const renderResultsAccordion = () => {
         if (!selectedTest || !selectedTestData) return null;
 
         return (
             <div className="results-accordion">
-                <h3>Results for Test ID: {selectedTest.id}</h3>
+                <div className='p-2 card m-2'>
+                    <p><strong>Results for Test ID: </strong>{selectedTest.id}</p>
+                    <p><strong>Obtain Marks:</strong>{selectedTestData.filter(question => question.isCorrect === true).length}</p>
+                </div>
                 {selectedTestData.map((data, index) => {
                     const isCorrect = data.isCorrect;
                     const selectedAnswer = data.selectedAnswer || 'No answer provided';
@@ -92,13 +83,9 @@ const UserTests = ({ user }) => {
                             key={index}
                             className={`accordion-card card ${isCorrect === null ? 'notAttempted' : isCorrect ? 'correct' : 'incorrect'} ${expandedQuestions[data.questionText] ? 'active' : ''}`}
                         >
-                            <div
-                                className="accordion-header"
-                                onClick={() => toggleQuestionExpand(data.questionText)}
-                            >
+                            <div className="accordion-header" onClick={() => toggleQuestionExpand(data.questionText)}>
                                 <div className={`status-indicator ${isCorrect === null ? 'notAttempted' : isCorrect ? 'correct' : 'incorrect'}`}></div>
-                                <p><strong>Question:</strong>   <div dangerouslySetInnerHTML={{ __html: data.questionText }} /></p>
-
+                                <p><strong>Question:</strong> <div dangerouslySetInnerHTML={{ __html: data.questionText }} /></p>
                                 <button className="toggle-button">{expandedQuestions[data.questionText] ? '-' : '+'}</button>
                             </div>
                             {expandedQuestions[data.questionText] && (
@@ -110,27 +97,24 @@ const UserTests = ({ user }) => {
                                         <div dangerouslySetInnerHTML={{ __html: data.correctAnswer }} />
                                     </div>
                                     <div className='card shadow rounded-5 m-3 p-2'>
-                                        <p><strong>Explaination</strong></p><div dangerouslySetInnerHTML={{ __html: data.SolutionText }} />
+                                        <p><strong>Explanation:</strong></p>
+                                        <div dangerouslySetInnerHTML={{ __html: data.SolutionText }} />
                                     </div>
                                 </div>
                             )}
                         </div>
                     );
                 })}
-                <button onClick={() => setSelectedTest(null)}>Back to Tests</button>
+                <button onClick={() => setSelectedTest(null)} className="btn btn-primary">Back to Tests</button>
             </div>
         );
     };
 
-    // Calculate the current tests to display
     const indexOfLastTest = currentPage * testsPerPage;
     const indexOfFirstTest = indexOfLastTest - testsPerPage;
     const currentTests = tests.slice(indexOfFirstTest, indexOfLastTest);
-
-    // Calculate total pages
     const totalPages = Math.ceil(tests.length / testsPerPage);
 
-    // Pagination controls
     const handleNextPage = () => {
         if (currentPage < totalPages) {
             setCurrentPage(currentPage + 1);
@@ -144,40 +128,44 @@ const UserTests = ({ user }) => {
     };
 
     return (
-        <div>
+        <div className="container">
             {
-                currentTests.length > 0 ? (<div className='user-tests card rounded-5 m-5 p-5 align-content-center shadow'>
-                      <h3 className='mb-4'>Your Tests</h3>
-                    <div className="tests-grid">
-                        {currentTests.map(test => (
-                            <div
-                                key={test.id}
-                                className={`test-card ${selectedTest && selectedTest.id === test.id ? 'selected' : ''}`}
-                                onClick={() => handleTestClick(test)}
-                            >
-                                <p><strong>Test ID:</strong> {test.id}</p>
-                                <p><strong>Total Time:</strong> {test.TestConfiguration.TotalTime} seconds</p>
-                                <p><strong>Remaining Time:</strong> {test.TestConfiguration.currentRemainingTime} seconds</p>
-                                <p><strong>Status:</strong> {test.TestConfiguration.isTestEnd ? 'Ended' : 'In Progress'}</p>
-                                <button onClick={() => handleTestClick(test)} className="view-test-data">View Test Data</button>
-                            </div>
-                        ))}
-                    </div>
+                currentTests.length > 0 ? (
+                    <div className='user-tests card rounded-5 m-5 p-5 shadow'>
+                        <h3 className='mb-4'>Your Tests</h3>
+                        <div className="row tests-grid">
+                            {currentTests.map(test => (
+                                <div
+                                    key={test.id}
+                                    className={`col-md-4 col-sm-6 mb-3`}
+                                >
+                                    <div
+                                        className={`test-card ${selectedTest && selectedTest.id === test.id ? 'selected' : ''}`}
+                                        onClick={() => handleTestClick(test)}
+                                    >
+                                        <p><strong>Test ID:</strong> {test.id}</p>
+                                        <p><strong>Total Time:</strong> {test.TestConfiguration.TotalTime} seconds</p>
+                                        <p><strong>Remaining Time:</strong> {test.TestConfiguration.currentRemainingTime} seconds</p>
+                                        <p><strong>Status:</strong> {test.TestConfiguration.isTestEnd ? 'Ended' : 'In Progress'}</p>
+                                        <button onClick={() => handleTestClick(test)} className="view-test-data">View Test Data</button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
 
-                    {/* Pagination controls */}
-                    <div className="pagination m-5">
-                        <button onClick={handlePrevPage} className="view-test-data" disabled={currentPage === 1}>
-                            Previous
-                        </button>
-                        <span>Page {currentPage} of {totalPages}</span>
-                        <button onClick={handleNextPage} className='view-test-data' disabled={currentPage === totalPages}>
-                            Next
-                        </button>
-                    </div>
+                        <div className="pagination d-flex justify-content-between m-5">
+                            <button onClick={handlePrevPage} className="btn btn-primary" disabled={currentPage === 1}>
+                                Previous
+                            </button>
+                            <span>Page {currentPage} of {totalPages}</span>
+                            <button onClick={handleNextPage} className='btn btn-primary' disabled={currentPage === totalPages}>
+                                Next
+                            </button>
+                        </div>
 
-                    {renderResultsAccordion()}
-                </div>)
-                    : (null)
+                        {renderResultsAccordion()}
+                    </div>
+                ) : (null)
             }
         </div>
     );

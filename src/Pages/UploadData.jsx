@@ -68,6 +68,8 @@ const UploadComponent = () => {
                     optionH: question.optionH,
                     plainTextOptionH: question.plainTextOptionH,
                     answer: question.answer,
+                    Subject:question.Subject,
+                    SubjectTopic:question.SubjectTopic
                 };
 
                 const docRef = doc(firebase.firestoreDb, 'Questions', questionId); // Use QuestionId as document ID
